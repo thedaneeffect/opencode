@@ -3,101 +3,10 @@
 [tools]
 bun = "1.3.3"
 
-[tasks.build]
-description = "Build OpenCode for current platform"
-run = """
-#!/usr/bin/env bash
-cd packages/opencode
-./script/build.ts --single
-"""
-
-[tasks.install]
-description = "Build and install to local bin directory"
-run = """
-#!/usr/bin/env bash
-set -e
-
-# Build first
-cd packages/opencode
-./script/build.ts --single
-cd ../..
-
-# Determine platform-specific binary name
-OS=$(uname -s | tr '[:upper:]' '[:lower:]')
-case "$OS" in
-  darwin) OS="darwin" ;;
-  linux) OS="linux" ;;
-  *) echo "Unsupported OS: $OS"; exit 1 ;;
-esac
-
-ARCH=$(uname -m)
-case "$ARCH" in
-  x86_64) ARCH="x64" ;;
-  arm64|aarch64) ARCH="arm64" ;;
-  *) echo "Unsupported architecture: $ARCH"; exit 1 ;;
-esac
-
-BINARY_DIR="packages/opencode/dist/opencode-$OS-$ARCH/bin"
-BINARY="$BINARY_DIR/opencode"
-
-if [ ! -f "$BINARY" ]; then
-  echo "❌ Binary not found at $BINARY"
-  exit 1
-fi
-
-# Determine install location (prefer XDG_BIN_HOME, fallback to ~/.local/bin)
-if [ -n "$XDG_BIN_HOME" ]; then
-  INSTALL_DIR="$XDG_BIN_HOME"
-else
-  INSTALL_DIR="$HOME/.local/bin"
-fi
-
-# Create install directory if it doesn't exist
-mkdir -p "$INSTALL_DIR"
-
-# Symlink binary
-echo "📦 Installing opencode to $INSTALL_DIR..."
-ln -sf "$(pwd)/$BINARY" "$INSTALL_DIR/opencode"
-
-echo "✅ Installed successfully!"
-echo ""
-echo "Binary location: $INSTALL_DIR/opencode"
-"$INSTALL_DIR/opencode" --version
-
-# Check if directory is in PATH
-if [[ ":$PATH:" != *":$INSTALL_DIR:"* ]]; then
-  echo ""
-  echo "⚠️  Warning: $INSTALL_DIR is not in your PATH"
-  echo "   Add this to your ~/.zshrc:"
-  echo "   export PATH=\\\"$INSTALL_DIR:\\$PATH\\\""
-fi
-"""
+[tasks.upgrade]
+description = "Upgrade opencode (rebuild and install)"
+run = "opencode upgrade"
 
 [tasks.sync]
-description = "Sync with upstream"
-run = """
-#!/usr/bin/env bash
-set -e
-
-echo "📥 Fetching upstream changes..."
-git fetch upstream
-
-BEHIND=$(git rev-list --count dev..upstream/dev)
-if [ "$BEHIND" -eq 0 ]; then
-  echo "✅ Already up to date with upstream"
-  exit 0
-fi
-
-echo "🔄 Found $BEHIND new commits from upstream"
-git log --oneline dev..upstream/dev
-
-echo "🔄 Rebasing your changes on upstream/dev..."
-git rebase upstream/dev || {
-  echo "❌ Rebase failed - resolve conflicts manually"
-  exit 1
-}
-
-echo "✅ Rebase successful!"
-git push origin dev --force-with-lease
-echo "✅ Pushed to origin/dev"
-"""
+description = "Sync with upstream, rebuild, and install"
+run = "opencode upgrade --sync"
