@@ -69,16 +69,16 @@ export const UpgradeCommand = {
               syncSpinner.start("Syncing with upstream...")
 
               try {
-                await $`cd ${BUILD_SOURCE_DIR} && git rebase upstream/dev`.quiet()
+                await $`cd ${BUILD_SOURCE_DIR} && git merge upstream/dev`.quiet()
                 syncSpinner.stop("Synced with upstream")
 
                 const pushSpinner = prompts.spinner()
                 pushSpinner.start("Pushing to fork...")
-                await $`cd ${BUILD_SOURCE_DIR} && git push origin dev --force-with-lease`.quiet()
+                await $`cd ${BUILD_SOURCE_DIR} && git push origin dev`.quiet()
                 pushSpinner.stop("Pushed successfully")
               } catch (err) {
                 syncSpinner.stop("Sync failed", 1)
-                prompts.log.error("Failed to rebase. Resolve conflicts manually and run upgrade again.")
+                prompts.log.error("Failed to merge. Resolve conflicts manually and run upgrade again.")
                 prompts.outro("Done")
                 return
               }
